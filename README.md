@@ -1,10 +1,47 @@
-# My Telegram Bot
+package main
 
-This is a simple Telegram bot built using Go.
+import (
+	"log"
+	"os"
 
-## How to Run
+	"github.com/spf13/cobra"
+	"gopkg.in/telegram-bot-api.v4"
+)
 
-1. Set your Telegram bot token in the environment variable `TELE_TOKEN`.
-2. Run the bot:
-```sh
-go run main.go
+var rootCmd = &cobra.Command{
+	Use:   "telegram-bot",
+	Short: "A simple Telegram bot",
+	Run: func(cmd *cobra.Command, args []string) {
+		token := os.Getenv("TELE_TOKEN")
+		bot, err := tgbotapi.NewBotAPI(token)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		bot.Debug = true
+
+		log.Printf("Authorized on account %s", bot.Self.UserName)
+
+		u := tgbotapi.NewUpdate(0)
+		u.Timeout = 60
+
+		updates, err := bot.GetUpdatesChan(u)
+
+		for update := range updates {
+			if update.Message == nil { // ignore any non-Message Updates
+				continue
+			}
+
+			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			bot.Send(msg)
+		}
+	},
+}
+
+func init() {
+	rootCmd.Execute()
+}
+
+func main() {}
